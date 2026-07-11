@@ -5,30 +5,115 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 # ==========================================
-# 页面配置
+# Custom CSS for Branding and Font Size
+# ==========================================
+st.markdown("""
+<style>
+/* Main font size and color */
+.stApp {
+    font-size: 18px;
+    color: #2E2E2E;
+}
+
+/* Make all text darker and larger */
+p, div, span, label {
+    font-size: 16px !important;
+    color: #1E1E1E !important;
+}
+
+/* Headers */
+h1 {
+    font-size: 36px !important;
+    color: #B8860B !important;
+    font-weight: bold;
+}
+
+h2 {
+    font-size: 28px !important;
+    color: #DAA520 !important;
+}
+
+h3 {
+    font-size: 22px !important;
+    color: #8B7355 !important;
+}
+
+/* Sidebar */
+.stSidebar {
+    font-size: 16px !important;
+}
+
+/* Metrics */
+.stMetric {
+    font-size: 18px !important;
+}
+
+/* Tables */
+.dataframe {
+    font-size: 15px !important;
+}
+
+/* Dataura brand color - yellow/gold/brown theme */
+.dataura-brand {
+    color: #DAA520 !important;
+    font-weight: bold;
+}
+
+.dataura-gold {
+    color: #B8860B !important;
+    font-weight: bold;
+}
+
+.dataura-brown {
+    color: #8B7355 !important;
+    font-weight: bold;
+}
+
+/* Buttons */
+.stButton>button {
+    font-size: 16px !important;
+    background-color: #DAA520;
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 5px;
+}
+
+/* Make tables more readable */
+table {
+    font-size: 15px !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ==========================================
+# Page Configuration
 # ==========================================
 st.set_page_config(
     page_title="Dataura SynthRWE - Colon Cancer Sandbox",
-    page_icon="🏥",
+    page_icon="",
     layout="wide"
 )
 
 # ==========================================
-# 标题和介绍
+# Title and Introduction with Copyright
 # ==========================================
-st.title("🏥 Dataura SynthRWE: Colon Cancer Surgical Oncology Sandbox")
-st.markdown("**Synthetic Real-World Evidence Dataset for Feasibility Testing & Study Design**")
+st.markdown('<span class="dataura-gold" style="font-size: 36px; font-weight: bold;">🏥 Dataura</span><span style="font-size: 36px;">® SynthRWE: Colon Cancer Surgical Oncology Sandbox</span>', unsafe_allow_html=True)
+
+st.markdown('<span style="font-size: 18px; color: #2E2E2E;"><b>Synthetic Real-World Evidence Dataset for Feasibility Testing & Study Design</b></span>', unsafe_allow_html=True)
 
 st.markdown("""
-This dashboard demonstrates a synthetic longitudinal dataset of 10,000 colorectal cancer patients,
-mimicking US claims-like data with realistic patient selection patterns, treatment pathways,
+<span style="font-size: 17px; color: #3E3E3E;">
+This dashboard demonstrates a synthetic longitudinal dataset of 10,000 colorectal cancer patients, 
+mimicking US claims-like data with realistic patient selection patterns, treatment pathways, 
 and outcomes across robotic-assisted, laparoscopic, and open surgery approaches.
-""")
+</span>
+""", unsafe_allow_html=True)
 
 st.divider()
 
 # ==========================================
-# 加载数据
+# Load Data
 # ==========================================
 @st.cache_data
 def load_data():
@@ -40,7 +125,7 @@ def load_data():
 
 df = load_data()
 
-# 如果数据不存在，提供文件上传选项
+# If data doesn't exist, provide upload option
 if df is None:
     st.warning("📁 Please upload your synthetic dataset CSV file:")
     uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
@@ -51,18 +136,18 @@ if df is None:
         st.stop()
 
 # ==========================================
-# 侧边栏：筛选器
+# Sidebar: Filters
 # ==========================================
 st.sidebar.header(" Data Filters")
 
-# 手术方式筛选
+# Surgery type filter
 surgery_options = st.sidebar.multiselect(
     "Select Surgical Approaches:",
     options=df['Surgery_Type'].unique(),
     default=df['Surgery_Type'].unique()
 )
 
-# 年龄范围筛选
+# Age range filter
 age_min, age_max = int(df['Age'].min()), int(df['Age'].max())
 age_range = st.sidebar.slider(
     "Age Range:",
@@ -71,7 +156,7 @@ age_range = st.sidebar.slider(
     value=(age_min, age_max)
 )
 
-# CCI评分筛选
+# CCI score filter
 cci_max = st.sidebar.slider(
     "Maximum CCI Score:",
     min_value=0,
@@ -79,7 +164,7 @@ cci_max = st.sidebar.slider(
     value=int(df['CCI_Score'].max())
 )
 
-# 应用筛选
+# Apply filters
 df_filtered = df[
     (df['Surgery_Type'].isin(surgery_options)) &
     (df['Age'] >= age_range[0]) &
@@ -88,9 +173,9 @@ df_filtered = df[
 ]
 
 # ==========================================
-# 关键指标展示 (KPI Cards)
+# Key Metrics (KPI Cards)
 # ==========================================
-st.subheader("📊 Cohort Overview")
+st.subheader(" Cohort Overview")
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
@@ -111,9 +196,9 @@ with col4:
 st.divider()
 
 # ==========================================
-# 图表 1：患者分布
+# Chart 1: Patient Distribution
 # ==========================================
-st.subheader(" Patient Distribution by Surgical Approach")
+st.subheader("👥 Patient Distribution by Surgical Approach")
 
 col_chart1, col_chart2 = st.columns(2)
 
@@ -151,45 +236,53 @@ with col_chart2:
     st.plotly_chart(fig_pie, use_container_width=True)
 
 # ==========================================
-# 图表 2：基线特征对比
+# Chart 2: Baseline Characteristics
 # ==========================================
 st.subheader("📋 Baseline Characteristics by Surgical Approach")
 
 baseline_cols = ['Age', 'CCI_Score', 'COPD', 'CHF', 'Diabetes_Uncomplicated']
 baseline_df = df_filtered.groupby('Surgery_Type')[baseline_cols].mean().round(3).reset_index()
 
+# Convert comorbidities to percentages
+for col in ['COPD', 'CHF', 'Diabetes_Uncomplicated']:
+    baseline_df[col] = baseline_df[col] * 100  # Convert to percentage
+
 baseline_df_transposed = baseline_df.set_index('Surgery_Type').T
 baseline_df_transposed.columns.name = 'Surgical Approach'
 
-# 重新排序列
+# Reorder columns
 target_order = ['Non-Surgical Management', 'Open', 'Laparoscopic', 'Robotic']
-# 只保留存在的列
 existing_cols = [col for col in target_order if col in baseline_df_transposed.columns]
 baseline_df_transposed = baseline_df_transposed[existing_cols]
 
+# Format the dataframe for display
+display_df = baseline_df_transposed.copy()
+
+# Format percentages to 1 decimal place
+for col in display_df.columns:
+    if col in ['COPD', 'CHF', 'Diabetes_Uncomplicated']:
+        display_df[col] = display_df[col].apply(lambda x: f"{x:.1f}%")
+    else:
+        display_df[col] = display_df[col].apply(lambda x: f"{x:.1f}")
+
 st.dataframe(
-    baseline_df_transposed,
+    display_df,
     use_container_width=True,
-    column_config={
-        col: st.column_config.NumberColumn(
-            col,
-            format="%.3f"
-        ) for col in baseline_df_transposed.columns
-    }
+    help="Note: Comorbidities shown as prevalence (%). Robotic surgery patients are younger and have lower CCI scores."
 )
 
-st.caption("💡 Higher values are shaded darker. Note the selection bias: Robotic surgery patients are younger and have lower CCI scores.")
+st.caption("💡 Higher values indicate older age, higher CCI, or higher comorbidity prevalence.")
 
 # ==========================================
-# 图表 3：临床结局对比
+# Chart 3: Clinical Outcomes
 # ==========================================
-st.subheader(" Clinical Outcomes & Resource Utilization")
+st.subheader("🏥 Clinical Outcomes & Resource Utilization")
 
 outcomes_cols = ['Length_of_Stay_Days', 'Has_30Day_Complication', 'Total_Cost_USD']
 outcomes_df = df_filtered.groupby('Surgery_Type')[outcomes_cols].mean().round(2).reset_index()
 outcomes_df['Complication_Rate_%'] = outcomes_df['Has_30Day_Complication'] * 100
 
-# 重新排序
+# Reorder
 outcomes_df_transposed = outcomes_df.set_index('Surgery_Type').T
 existing_cols_out = [col for col in target_order if col in outcomes_df_transposed.columns]
 outcomes_df_transposed = outcomes_df_transposed[existing_cols_out]
@@ -213,7 +306,7 @@ with col_out3:
         st.text(f"{col}: ${cost_val:,.0f}")
 
 # ==========================================
-# 图表 4：成本 vs 并发症散点图
+# Chart 4: Cost vs Complications Scatter
 # ==========================================
 st.divider()
 st.subheader("💰 Cost vs. Complication Rate Trade-off")
@@ -255,7 +348,7 @@ fig_scatter.update_layout(template='plotly_white')
 st.plotly_chart(fig_scatter, use_container_width=True)
 
 # ==========================================
-# 图表 5：LOS 分布箱线图
+# Chart 5: LOS Distribution Box Plot
 # ==========================================
 st.subheader("📦 Length of Stay Distribution")
 
@@ -277,14 +370,14 @@ fig_los.update_layout(showlegend=False, template='plotly_white')
 st.plotly_chart(fig_los, use_container_width=True)
 
 # ==========================================
-# 图表 6：合并症分析
+# Chart 6: Comorbidity Analysis
 # ==========================================
 st.subheader("🫁 Comorbidity Profile Analysis")
 
 comorbidity_cols = ['COPD', 'CHF', 'Cerebrovascular_Disease', 'Diabetes_Uncomplicated', 'Renal_Disease']
-comorbidity_df = df_filtered.groupby('Surgery_Type')[comorbidity_cols].mean().round(3) * 100
+comorbidity_df = df_filtered.groupby('Surgery_Type')[comorbidity_cols].mean().round(3) * 100  # Convert to %
 
-# 转置并排序
+# Transpose and sort
 comorbidity_df_transposed = comorbidity_df.T
 existing_cols_com = [col for col in target_order if col in comorbidity_df_transposed.columns]
 comorbidity_df_transposed = comorbidity_df_transposed[existing_cols_com]
@@ -312,7 +405,7 @@ fig_comorbidity.update_layout(
 st.plotly_chart(fig_comorbidity, use_container_width=True)
 
 # ==========================================
-# 数据下载
+# Data Download
 # ==========================================
 st.divider()
 st.subheader("📥 Download Synthetic Dataset")
@@ -326,6 +419,6 @@ st.download_button(
 )
 
 st.markdown("---")
-st.markdown("**Dataura SynthRWE** - Synthetic Real-World Evidence Data Engine")
-st.markdown("*Generated for educational and feasibility testing purposes. Not for regulatory or clinical decision-making.*")
-st.markdown("Seed: 20260711 | Dataset Version: V2.0 Microsimulation")
+st.markdown('<span class="dataura-gold" style="font-size: 18px; font-weight: bold;">Dataura</span><span style="font-size: 16px;">® SynthRWE</span> - Synthetic Real-World Evidence Data Engine', unsafe_allow_html=True)
+st.markdown('<span style="font-size: 15px; color: #5E5E5E;"><i>Generated for educational and feasibility testing purposes. Not for regulatory or clinical decision-making.</i></span>', unsafe_allow_html=True)
+st.markdown('<span style="font-size: 14px; color: #6E6E6E;">Seed: 20260711 | Dataset Version: V2.0 Microsimulation</span>', unsafe_allow_html=True)
