@@ -168,8 +168,14 @@ existing_cols = [col for col in target_order if col in baseline_df_transposed.co
 baseline_df_transposed = baseline_df_transposed[existing_cols]
 
 st.dataframe(
-    baseline_df_transposed.style.background_gradient(cmap='Blues', axis=1),
-    use_container_width=True
+    baseline_df_transposed,
+    use_container_width=True,
+    column_config={
+        col: st.column_config.NumberColumn(
+            col,
+            format="%.3f"
+        ) for col in baseline_df_transposed.columns
+    }
 )
 
 st.caption("💡 Higher values are shaded darker. Note the selection bias: Robotic surgery patients are younger and have lower CCI scores.")
