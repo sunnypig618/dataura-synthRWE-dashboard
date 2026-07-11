@@ -21,7 +21,7 @@ p, div, span, label, li {
 
 /* MASSIVE GOLD HEADERS */
 h1 {
-    font-size: 60px !important;
+    font-size: 88px !important;
     color: #B8860B !important; /* Dark Goldenrod */
     font-weight: 900 !important;
     line-height: 1.1 !important;
