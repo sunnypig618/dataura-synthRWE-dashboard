@@ -21,20 +21,20 @@ p, div, span, label {
     color: #1E1E1E !important;
 }
 
-/* Headers */
+/* Headers - BIGGER */
 h1 {
-    font-size: 36px !important;
+    font-size: 42px !important;
     color: #B8860B !important;
     font-weight: bold;
 }
 
 h2 {
-    font-size: 28px !important;
+    font-size: 32px !important;
     color: #DAA520 !important;
 }
 
 h3 {
-    font-size: 22px !important;
+    font-size: 24px !important;
     color: #8B7355 !important;
 }
 
@@ -50,7 +50,7 @@ h3 {
 
 /* Tables */
 .dataframe {
-    font-size: 15px !important;
+    font-size: 16px !important;
 }
 
 /* Dataura brand color - yellow/gold/brown theme */
@@ -81,7 +81,7 @@ h3 {
 
 /* Make tables more readable */
 table {
-    font-size: 15px !important;
+    font-size: 16px !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -98,16 +98,16 @@ st.set_page_config(
 # ==========================================
 # Title and Introduction with Copyright
 # ==========================================
-st.markdown('<span class="dataura-gold" style="font-size: 60px; font-weight: bold;">🏥 Dataura</span><span style="font-size: 60px;">® SynthRWE: Colon Cancer Surgical Oncology Sandbox</span>', unsafe_allow_html=True)
+st.markdown('<h1 style="color: #B8860B; font-size: 42px;"> Dataura SynthRWE®: Colon Cancer Surgical Oncology Sandbox</h1>', unsafe_allow_html=True)
 
-st.markdown('<span style="font-size: 18px; color: #2E2E2E;"><b>Synthetic Real-World Evidence Dataset for Feasibility Testing & Study Design</b></span>', unsafe_allow_html=True)
+st.markdown('<p style="font-size: 18px; color: #2E2E2E;"><b>Synthetic Real-World Evidence Dataset for Feasibility Testing & Study Design</b></p>', unsafe_allow_html=True)
 
 st.markdown("""
-<span style="font-size: 17px; color: #3E3E3E;">
+<p style="font-size: 17px; color: #3E3E3E;">
 This dashboard demonstrates a synthetic longitudinal dataset of 10,000 colorectal cancer patients, 
 mimicking US claims-like data with realistic patient selection patterns, treatment pathways, 
 and outcomes across robotic-assisted, laparoscopic, and open surgery approaches.
-</span>
+</p>
 """, unsafe_allow_html=True)
 
 st.divider()
@@ -127,7 +127,7 @@ df = load_data()
 
 # If data doesn't exist, provide upload option
 if df is None:
-    st.warning("📁 Please upload your synthetic dataset CSV file:")
+    st.warning(" Please upload your synthetic dataset CSV file:")
     uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
     if uploaded_file is not None:
         df = pd.read_csv(uploaded_file)
@@ -198,7 +198,7 @@ st.divider()
 # ==========================================
 # Chart 1: Patient Distribution
 # ==========================================
-st.subheader("👥 Patient Distribution by Surgical Approach")
+st.subheader(" Patient Distribution by Surgical Approach")
 
 col_chart1, col_chart2 = st.columns(2)
 
@@ -241,77 +241,78 @@ with col_chart2:
 st.subheader("📋 Baseline Characteristics by Surgical Approach")
 
 baseline_cols = ['Age', 'CCI_Score', 'COPD', 'CHF', 'Diabetes_Uncomplicated']
-baseline_df = df_filtered.groupby('Surgery_Type')[baseline_cols].mean().round(3).reset_index()
+baseline_df = df_filtered.groupby('Surgery_Type')[baseline_cols].mean().reset_index()
 
-# Convert comorbidities to percentages
-for col in ['COPD', 'CHF', 'Diabetes_Uncomplicated']:
-    baseline_df[col] = baseline_df[col] * 100  # Convert to percentage
+# Convert comorbidities to percentages and format all columns
+baseline_df['Age'] = baseline_df['Age'].round(1)
+baseline_df['CCI_Score'] = baseline_df['CCI_Score'].round(2)
+baseline_df['COPD'] = (baseline_df['COPD'] * 100).round(1).astype(str) + '%'
+baseline_df['CHF'] = (baseline_df['CHF'] * 100).round(1).astype(str) + '%'
+baseline_df['Diabetes_Uncomplicated'] = (baseline_df['Diabetes_Uncomplicated'] * 100).round(1).astype(str) + '%'
 
+# Set Surgery_Type as index for transposing
 baseline_df_transposed = baseline_df.set_index('Surgery_Type').T
-baseline_df_transposed.columns.name = 'Surgical Approach'
+baseline_df_transposed.columns.name = None
 
 # Reorder columns
 target_order = ['Non-Surgical Management', 'Open', 'Laparoscopic', 'Robotic']
 existing_cols = [col for col in target_order if col in baseline_df_transposed.columns]
 baseline_df_transposed = baseline_df_transposed[existing_cols]
 
-# Create a formatted version for display
-display_df = baseline_df_transposed.copy()
+# Reset index to make it a proper column
+baseline_df_transposed = baseline_df_transposed.reset_index()
+baseline_df_transposed = baseline_df_transposed.rename(columns={'index': 'Characteristic'})
 
-# Format the dataframe properly - convert to strings with formatting
-formatted_data = {}
-for col in display_df.columns:
-    formatted_data[col] = []
-    for idx in display_df.index:
-        if idx in ['COPD', 'CHF', 'Diabetes_Uncomplicated']:
-            # Format as percentage
-            formatted_data[col].append(f"{display_df.loc[idx, col]:.1f}%")
-        else:
-            # Format as number
-            formatted_data[col].append(f"{display_df.loc[idx, col]:.1f}")
-
-# Create new dataframe with formatted strings
-display_df_formatted = pd.DataFrame(formatted_data, index=display_df.index)
-
-# Display the formatted dataframe
+# Display the dataframe
 st.dataframe(
-    display_df_formatted,
+    baseline_df_transposed,
     use_container_width=True,
-    help="Note: Comorbidities shown as prevalence (%). Robotic surgery patients are younger and have lower CCI scores."
+    hide_index=True
 )
 
-st.caption("💡 Higher values indicate older age, higher CCI, or higher comorbidity prevalence.")
+st.caption("💡 Higher values indicate older age, higher CCI, or higher comorbidity prevalence. Note the selection bias in surgical approaches.")
+
 # ==========================================
 # Chart 3: Clinical Outcomes
 # ==========================================
 st.subheader("🏥 Clinical Outcomes & Resource Utilization")
 
 outcomes_cols = ['Length_of_Stay_Days', 'Has_30Day_Complication', 'Total_Cost_USD']
-outcomes_df = df_filtered.groupby('Surgery_Type')[outcomes_cols].mean().round(2).reset_index()
-outcomes_df['Complication_Rate_%'] = outcomes_df['Has_30Day_Complication'] * 100
+outcomes_df = df_filtered.groupby('Surgery_Type')[outcomes_cols].mean().reset_index()
 
-# Reorder
+# Format columns
+outcomes_df['Length_of_Stay_Days'] = outcomes_df['Length_of_Stay_Days'].round(1)
+outcomes_df['Complication_Rate_%'] = (outcomes_df['Has_30Day_Complication'] * 100).round(1)
+outcomes_df['Total_Cost_USD'] = outcomes_df['Total_Cost_USD'].round(0)
+
+# Transpose for display
 outcomes_df_transposed = outcomes_df.set_index('Surgery_Type').T
+outcomes_df_transposed.columns.name = None
 existing_cols_out = [col for col in target_order if col in outcomes_df_transposed.columns]
 outcomes_df_transposed = outcomes_df_transposed[existing_cols_out]
+outcomes_df_transposed = outcomes_df_transposed.reset_index()
+outcomes_df_transposed = outcomes_df_transposed.rename(columns={'index': 'Outcome'})
 
+# Display in columns
 col_out1, col_out2, col_out3 = st.columns(3)
 
 with col_out1:
     st.markdown("#### Average Length of Stay (Days)")
-    for col in existing_cols_out:
-        st.text(f"{col}: {outcomes_df_transposed.loc['Length_of_Stay_Days', col]} days")
+    for idx, row in outcomes_df_transposed.iterrows():
+        st.text(f"{row['Outcome']}: {row[outcomes_df_transposed.columns[1]]} days")
 
 with col_out2:
     st.markdown("#### 30-Day Complication Rate (%)")
-    for col in existing_cols_out:
-        st.text(f"{col}: {outcomes_df_transposed.loc['Complication_Rate_%', col]}%")
+    # Recalculate for display
+    for surgery in existing_cols_out:
+        rate = outcomes_df[outcomes_df['Surgery_Type'] == surgery]['Has_30Day_Complication'].mean() * 100
+        st.text(f"{surgery}: {rate:.1f}%")
 
 with col_out3:
     st.markdown("#### Average Cost (USD)")
-    for col in existing_cols_out:
-        cost_val = outcomes_df_transposed.loc['Total_Cost_USD', col]
-        st.text(f"{col}: ${cost_val:,.0f}")
+    for surgery in existing_cols_out:
+        cost = outcomes_df[outcomes_df['Surgery_Type'] == surgery]['Total_Cost_USD'].mean()
+        st.text(f"{surgery}: ${cost:,.0f}")
 
 # ==========================================
 # Chart 4: Cost vs Complications Scatter
@@ -383,7 +384,7 @@ st.plotly_chart(fig_los, use_container_width=True)
 st.subheader("🫁 Comorbidity Profile Analysis")
 
 comorbidity_cols = ['COPD', 'CHF', 'Cerebrovascular_Disease', 'Diabetes_Uncomplicated', 'Renal_Disease']
-comorbidity_df = df_filtered.groupby('Surgery_Type')[comorbidity_cols].mean().round(3) * 100  # Convert to %
+comorbidity_df = df_filtered.groupby('Surgery_Type')[comorbidity_cols].mean() * 100  # Convert to %
 
 # Transpose and sort
 comorbidity_df_transposed = comorbidity_df.T
@@ -427,6 +428,6 @@ st.download_button(
 )
 
 st.markdown("---")
-st.markdown('<span class="dataura-gold" style="font-size: 18px; font-weight: bold;">Dataura</span><span style="font-size: 16px;">® SynthRWE</span> - Synthetic Real-World Evidence Data Engine', unsafe_allow_html=True)
-st.markdown('<span style="font-size: 15px; color: #5E5E5E;"><i>Generated for educational and feasibility testing purposes. Not for regulatory or clinical decision-making.</i></span>', unsafe_allow_html=True)
-st.markdown('<span style="font-size: 14px; color: #6E6E6E;">Seed: 20260711 | Dataset Version: V2.0 Microsimulation</span>', unsafe_allow_html=True)
+st.markdown('<h2 style="color: #B8860B; font-size: 24px;">Dataura SynthRWE®</h2> - Synthetic Real-World Evidence Data Engine', unsafe_allow_html=True)
+st.markdown('<p style="font-size: 15px; color: #5E5E5E;"><i>Generated for educational and feasibility testing purposes. Not for regulatory or clinical decision-making.</i></p>', unsafe_allow_html=True)
+st.markdown('<p style="font-size: 14px; color: #6E6E6E;">Seed: 20260711 | Dataset Version: V2.0 Microsimulation</p>', unsafe_allow_html=True)
