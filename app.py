@@ -98,7 +98,7 @@ st.set_page_config(
 # ==========================================
 # Title and Introduction with Copyright
 # ==========================================
-st.markdown('<span class="dataura-gold" style="font-size: 36px; font-weight: bold;">🏥 Dataura</span><span style="font-size: 36px;">® SynthRWE: Colon Cancer Surgical Oncology Sandbox</span>', unsafe_allow_html=True)
+st.markdown('<span class="dataura-gold" style="font-size: 60px; font-weight: bold;">🏥 Dataura</span><span style="font-size: 60px;">® SynthRWE: Colon Cancer Surgical Oncology Sandbox</span>', unsafe_allow_html=True)
 
 st.markdown('<span style="font-size: 18px; color: #2E2E2E;"><b>Synthetic Real-World Evidence Dataset for Feasibility Testing & Study Design</b></span>', unsafe_allow_html=True)
 
@@ -255,24 +255,32 @@ target_order = ['Non-Surgical Management', 'Open', 'Laparoscopic', 'Robotic']
 existing_cols = [col for col in target_order if col in baseline_df_transposed.columns]
 baseline_df_transposed = baseline_df_transposed[existing_cols]
 
-# Format the dataframe for display
+# Create a formatted version for display
 display_df = baseline_df_transposed.copy()
 
-# Format percentages to 1 decimal place
+# Format the dataframe properly - convert to strings with formatting
+formatted_data = {}
 for col in display_df.columns:
-    if col in ['COPD', 'CHF', 'Diabetes_Uncomplicated']:
-        display_df[col] = display_df[col].apply(lambda x: f"{x:.1f}%")
-    else:
-        display_df[col] = display_df[col].apply(lambda x: f"{x:.1f}")
+    formatted_data[col] = []
+    for idx in display_df.index:
+        if idx in ['COPD', 'CHF', 'Diabetes_Uncomplicated']:
+            # Format as percentage
+            formatted_data[col].append(f"{display_df.loc[idx, col]:.1f}%")
+        else:
+            # Format as number
+            formatted_data[col].append(f"{display_df.loc[idx, col]:.1f}")
 
+# Create new dataframe with formatted strings
+display_df_formatted = pd.DataFrame(formatted_data, index=display_df.index)
+
+# Display the formatted dataframe
 st.dataframe(
-    display_df,
+    display_df_formatted,
     use_container_width=True,
     help="Note: Comorbidities shown as prevalence (%). Robotic surgery patients are younger and have lower CCI scores."
 )
 
 st.caption("💡 Higher values indicate older age, higher CCI, or higher comorbidity prevalence.")
-
 # ==========================================
 # Chart 3: Clinical Outcomes
 # ==========================================
