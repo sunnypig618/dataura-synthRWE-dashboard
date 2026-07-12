@@ -16,7 +16,7 @@ st.set_page_config(
 # ==========================================
 # Header & Literature Context
 # ==========================================
-st.title(" Dataura SynthRWE® V3.0")
+st.title("🧬 Dataura SynthRWE® V3.0")
 st.markdown("### Evidence-Calibrated Microsimulation Engine")
 st.markdown("""
 This V3.0 dataset fuses fragmented literature into a cohesive, patient-level tokenized sandbox. 
@@ -70,7 +70,6 @@ st.sidebar.header("🔍 Cohort Filters")
 
 # Define strict categorical orders
 ses_order = ['Low ($0-54k)', 'Medium ($55k-74k)', 'High ($75k+)']
-# FIX: Include 'Unknown' in stage options
 stage_order = ['I', 'II', 'III', 'IV', 'Unknown']
 
 ses_options = st.sidebar.multiselect(
@@ -79,7 +78,6 @@ ses_options = st.sidebar.multiselect(
     default=ses_order
 )
 
-# FIX: Default to all stages including Unknown
 stage_options = st.sidebar.multiselect(
     "Stage at Diagnosis:",
     options=stage_order,
@@ -106,7 +104,7 @@ if len(df_filtered) == 0:
 # ==========================================
 # KPI Cards
 # ==========================================
-st.subheader(" Cohort Overview")
+st.subheader("📊 Cohort Overview")
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
@@ -114,7 +112,9 @@ with col1:
 with col2:
     st.metric("Mean Age", f"{df_filtered['Age'].mean():.1f} years")
 with col3:
-    st.metric("Median Survival", f"{df_filtered['Survival_Months'].median():.1f} months")
+    # Calculate 5-year survival rate for the KPI card
+    surv_5yr = (df_filtered['Survival_Months'] >= 60).mean() * 100
+    st.metric("5-Year Survival Rate", f"{surv_5yr:.1f}%")
 with col4:
     avg_cost = df_filtered['Total_Direct_Medical_Cost'].mean()
     st.metric("Avg Direct Cost", f"${avg_cost:,.0f}")
@@ -138,7 +138,6 @@ else:
 col_disp1, col_disp2 = st.columns(2)
 
 with col_disp1:
-    # FIX: Removed custom colors, using default Plotly blue/orange/green theme
     fig_stage_ses = px.bar(
         stage_iv_df, 
         x='SES_MHI_Category', 
@@ -153,7 +152,6 @@ with col_disp1:
     st.plotly_chart(fig_stage_ses, use_container_width=True)
 
 with col_disp2:
-    # FIX: Include 'Unknown' in pie chart
     fig_stage_pie = px.pie(
         df_filtered, 
         names='Stage_at_Diagnosis', 
@@ -164,47 +162,53 @@ with col_disp2:
     st.plotly_chart(fig_stage_pie, use_container_width=True)
 
 # ==========================================
-# Module 2: Survival Outcomes (Zhu et al.)
+# Module 2: Survival Outcomes (Zhu et al.) - 5-YEAR VIEW
 # ==========================================
-st.subheader("⏳ 2. Survival Outcomes: The SES Gap")
+st.subheader("⏳ 2. Survival Outcomes: The SES Gap (5-Year View)")
 st.caption("Benchmark: Zhu et al. Cox Regression shows High SES has significantly better Overall Survival (HR 0.877).")
 
-# FIX: Removed custom brown/gold colors. Let Plotly auto-assign default blue/orange/green colors.
+# Draw a robust Kaplan-Meier step chart capped at 60 months
 fig_surv = go.Figure()
+colors_map = {'Low ($0-54k)': '#EF553B', 'Medium ($55k-74k)': '#636EFA', 'High ($75k+)': '#00CC96'}
 
 for ses in ses_order:
-    sub_df = df_filtered[df_filtered['SES_MHI_Category'] == ses]['Survival_Months'].dropna().sort_values()
-    if len(sub_df) == 0: continue
+    original_df = df_filtered[df_filtered['SES_MHI_Category'] == ses]['Survival_Months'].dropna()
+    if len(original_df) == 0: continue
+    
+    # Cap survival times at 60 months (5 years) to focus on meaningful early differences
+    sub_df = original_df.clip(upper=60)
     
     n = len(sub_df)
     unique_times = np.unique(sub_df)
+    # Calculate survival probability at each time point
     survival_probs = [(n - np.sum(sub_df <= t)) / n for t in unique_times]
     
-    # FIX: Removed line=dict(color=...) to let Plotly use its default beautiful color cycle
     fig_surv.add_trace(go.Scatter(
         x=unique_times,
         y=survival_probs,
         mode='lines',
         name=ses,
-        line=dict(shape='hv', width=2), 
-        hovertemplate=f'{ses}<br>Time: %{{x:.1f}} months<br>Survival: %{{y:.1%}}<extra></extra>'
+        line=dict(shape='hv', color=colors_map.get(ses, 'gray'), width=2),
+        hovertemplate=f'{ses}<br>Time: %{x:.0f} months<br>Survival: %{y:.1%}<extra></extra>'
     ))
 
 fig_surv.update_layout(
-    title='Survival Probability by SES (Kaplan-Meier Estimate)',
+    title='5-Year Survival Probability by SES',
     xaxis_title='Time (Months)',
     yaxis_title='Survival Probability',
     template='plotly_white',
+    # Limit X-axis to 60 months, with ticks every 12 months (1 year) for a clean look
+    xaxis=dict(range=[0, 60], dtick=12), 
     yaxis=dict(range=[0, 1.05]),
     legend_title='SES (MHI)'
 )
 st.plotly_chart(fig_surv, use_container_width=True)
-st.caption("*Note: Step curves represent the empirical survival function. Higher curves indicate better survival outcomes.*")
+st.caption("*Note: Curves are capped at 60 months (5 years) to highlight early survival disparities. Step curves represent the empirical survival function.*")
 
 # ==========================================
 # Module 3: Guideline Impact on Treatment (Bekaii-Saab)
 # ==========================================
-st.subheader(" 3. Clinical Pathways: Guideline Impact on Late-Line Therapy")
+st.subheader("💊 3. Clinical Pathways: Guideline Impact on Late-Line Therapy")
 st.caption("Benchmark: Bekaii-Saab et al. (Optum) shows 45.3% uptake of Regorafenib flexible dosing post-NCCN guidelines.")
 
 mcr_df = df_filtered[(df_filtered['Stage_at_Diagnosis'] == 'IV') & (df_filtered['Received_Chemo'] == 1)]
@@ -216,7 +220,6 @@ with col_guide1:
         flex_rate = mcr_df['Regorafenib_Flexible_Dosing'].mean() * 100
         st.metric("Flexible Dosing Uptake (mCRC)", f"{flex_rate:.1f}%", delta="Target: 45.3% (Bekaii-Saab)")
         
-        # FIX: Include 'Unknown' in treatment chart
         tx_rates = df_filtered.groupby('Stage_at_Diagnosis')[['Received_Surgery', 'Received_Chemo']].mean() * 100
         fig_tx = px.bar(
             tx_rates.reset_index().melt(id_vars='Stage_at_Diagnosis'),
@@ -233,7 +236,6 @@ with col_guide1:
         st.warning("No Stage IV patients in current filter to calculate Regorafenib metrics.")
 
 with col_guide2:
-    # FIX: Removed custom YlOrBr_r color sequence, using default
     fig_loc = px.pie(
         df_filtered, 
         names='Tumor_Location', 
@@ -260,7 +262,6 @@ with col_cost1:
         'Total_Cost': [total_hosp, total_drugs, total_surg, total_other]
     })
     
-    # FIX: Removed custom PuBu_r color sequence
     fig_cost_pie = px.pie(
         cost_data, 
         values='Total_Cost', 
@@ -275,7 +276,6 @@ with col_cost1:
     st.markdown("- 🏥 Hospitalization: ~36%  \n- 💊 Drugs: ~20%  \n- 🔪 Surgery: ~16%")
 
 with col_cost2:
-    # FIX: Removed filter for != 'Unknown'. Now includes all stages.
     fig_cost_box = px.box(
         df_filtered,
         x='Stage_at_Diagnosis',
@@ -296,7 +296,7 @@ st.subheader("📥 Download V3.0 Tokenized Dataset")
 
 csv = df_filtered.to_csv(index=False).encode('utf-8')
 st.download_button(
-    label=" Download Filtered V3.0 Dataset (CSV)",
+    label="📥 Download Filtered V3.0 Dataset (CSV)",
     data=csv,
     file_name='Dataura_V3_Filtered_Evidence_Calibrated.csv',
     mime='text/csv',
