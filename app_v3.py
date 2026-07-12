@@ -70,6 +70,7 @@ st.sidebar.header("🔍 Cohort Filters")
 
 # Define strict categorical orders
 ses_order = ['Low ($0-54k)', 'Medium ($55k-74k)', 'High ($75k+)']
+# FIX: Include 'Unknown' in stage options
 stage_order = ['I', 'II', 'III', 'IV', 'Unknown']
 
 ses_options = st.sidebar.multiselect(
@@ -78,10 +79,11 @@ ses_options = st.sidebar.multiselect(
     default=ses_order
 )
 
+# FIX: Default to all stages including Unknown
 stage_options = st.sidebar.multiselect(
     "Stage at Diagnosis:",
-    options=['I', 'II', 'III', 'IV'],
-    default=['I', 'II', 'III', 'IV']
+    options=stage_order,
+    default=stage_order
 )
 
 loc_options = st.sidebar.multiselect(
@@ -104,7 +106,7 @@ if len(df_filtered) == 0:
 # ==========================================
 # KPI Cards
 # ==========================================
-st.subheader("📊 Cohort Overview")
+st.subheader(" Cohort Overview")
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
@@ -125,7 +127,7 @@ st.divider()
 st.subheader("📉 1. Health Disparities: SES Impact on Stage at Diagnosis")
 st.caption("Benchmark: Zhu et al. (SEER) shows Low SES patients present with higher rates of Stage IV disease.")
 
-# Safe calculation of Stage IV percentages
+# Calculate percentages for Stage IV by SES
 stage_counts = df_filtered.groupby(['SES_MHI_Category', 'Stage_at_Diagnosis']).size().unstack(fill_value=0)
 if 'IV' in stage_counts.columns:
     stage_iv_df = (stage_counts['IV'] / stage_counts.sum(axis=1) * 100).reset_index()
@@ -136,6 +138,7 @@ else:
 col_disp1, col_disp2 = st.columns(2)
 
 with col_disp1:
+    # FIX: Removed custom colors, using default Plotly blue/orange/green theme
     fig_stage_ses = px.bar(
         stage_iv_df, 
         x='SES_MHI_Category', 
@@ -144,12 +147,13 @@ with col_disp1:
         title='Stage IV Presentation Rate by SES (%)',
         labels={'SES_MHI_Category': 'Median Household Income', 'Stage_IV_Percentage': '% Stage IV'},
         text_auto='.1f',
-        category_orders={"SES_MHI_Category": ses_order} # FIX: Enforce Low -> Medium -> High
+        category_orders={"SES_MHI_Category": ses_order}
     )
     fig_stage_ses.update_layout(showlegend=False, yaxis_title="Percentage (%)")
     st.plotly_chart(fig_stage_ses, use_container_width=True)
 
 with col_disp2:
+    # FIX: Include 'Unknown' in pie chart
     fig_stage_pie = px.pie(
         df_filtered, 
         names='Stage_at_Diagnosis', 
@@ -160,14 +164,13 @@ with col_disp2:
     st.plotly_chart(fig_stage_pie, use_container_width=True)
 
 # ==========================================
-# Module 2: Survival Outcomes (Zhu et al.) - FIXED KM CURVE
+# Module 2: Survival Outcomes (Zhu et al.)
 # ==========================================
 st.subheader("⏳ 2. Survival Outcomes: The SES Gap")
 st.caption("Benchmark: Zhu et al. Cox Regression shows High SES has significantly better Overall Survival (HR 0.877).")
 
-# FIX: Use plotly.graph_objects to draw a robust Kaplan-Meier step chart
+# FIX: Removed custom brown/gold colors. Let Plotly auto-assign default blue/orange/green colors.
 fig_surv = go.Figure()
-colors_map = {'Low ($0-54k)': '#EF553B', 'Medium ($55k-74k)': '#636EFA', 'High ($75k+)': '#00CC96'}
 
 for ses in ses_order:
     sub_df = df_filtered[df_filtered['SES_MHI_Category'] == ses]['Survival_Months'].dropna().sort_values()
@@ -175,15 +178,15 @@ for ses in ses_order:
     
     n = len(sub_df)
     unique_times = np.unique(sub_df)
-    # Calculate survival probability at each time point
     survival_probs = [(n - np.sum(sub_df <= t)) / n for t in unique_times]
     
+    # FIX: Removed line=dict(color=...) to let Plotly use its default beautiful color cycle
     fig_surv.add_trace(go.Scatter(
         x=unique_times,
         y=survival_probs,
         mode='lines',
         name=ses,
-        line=dict(shape='hv', color=colors_map.get(ses, 'gray'), width=2), # 'hv' creates the step effect
+        line=dict(shape='hv', width=2), 
         hovertemplate=f'{ses}<br>Time: %{{x:.1f}} months<br>Survival: %{{y:.1%}}<extra></extra>'
     ))
 
@@ -201,7 +204,7 @@ st.caption("*Note: Step curves represent the empirical survival function. Higher
 # ==========================================
 # Module 3: Guideline Impact on Treatment (Bekaii-Saab)
 # ==========================================
-st.subheader("💊 3. Clinical Pathways: Guideline Impact on Late-Line Therapy")
+st.subheader(" 3. Clinical Pathways: Guideline Impact on Late-Line Therapy")
 st.caption("Benchmark: Bekaii-Saab et al. (Optum) shows 45.3% uptake of Regorafenib flexible dosing post-NCCN guidelines.")
 
 mcr_df = df_filtered[(df_filtered['Stage_at_Diagnosis'] == 'IV') & (df_filtered['Received_Chemo'] == 1)]
@@ -213,6 +216,7 @@ with col_guide1:
         flex_rate = mcr_df['Regorafenib_Flexible_Dosing'].mean() * 100
         st.metric("Flexible Dosing Uptake (mCRC)", f"{flex_rate:.1f}%", delta="Target: 45.3% (Bekaii-Saab)")
         
+        # FIX: Include 'Unknown' in treatment chart
         tx_rates = df_filtered.groupby('Stage_at_Diagnosis')[['Received_Surgery', 'Received_Chemo']].mean() * 100
         fig_tx = px.bar(
             tx_rates.reset_index().melt(id_vars='Stage_at_Diagnosis'),
@@ -222,18 +226,18 @@ with col_guide1:
             barmode='group',
             title='Treatment Receipt Rates by Stage (%)',
             labels={'value': 'Percentage (%)', 'variable': 'Treatment Type'},
-            category_orders={"Stage_at_Diagnosis": ['I', 'II', 'III', 'IV']}
+            category_orders={"Stage_at_Diagnosis": stage_order}
         )
         st.plotly_chart(fig_tx, use_container_width=True)
     else:
         st.warning("No Stage IV patients in current filter to calculate Regorafenib metrics.")
 
 with col_guide2:
+    # FIX: Removed custom YlOrBr_r color sequence, using default
     fig_loc = px.pie(
         df_filtered, 
         names='Tumor_Location', 
-        title='Tumor Location Distribution',
-        color_discrete_sequence=px.colors.sequential.YlOrBr_r
+        title='Tumor Location Distribution'
     )
     st.plotly_chart(fig_loc, use_container_width=True)
 
@@ -256,13 +260,13 @@ with col_cost1:
         'Total_Cost': [total_hosp, total_drugs, total_surg, total_other]
     })
     
+    # FIX: Removed custom PuBu_r color sequence
     fig_cost_pie = px.pie(
         cost_data, 
         values='Total_Cost', 
         names='Category', 
         title='Synthetic Cost Drivers vs. Jafari Benchmarks',
-        hole=0.4,
-        color_discrete_sequence=px.colors.sequential.PuBu_r
+        hole=0.4
     )
     fig_cost_pie.update_traces(textposition='inside', textinfo='percent+label')
     st.plotly_chart(fig_cost_pie, use_container_width=True)
@@ -271,15 +275,15 @@ with col_cost1:
     st.markdown("- 🏥 Hospitalization: ~36%  \n- 💊 Drugs: ~20%  \n- 🔪 Surgery: ~16%")
 
 with col_cost2:
-    # FIX: Enforce Stage I -> II -> III -> IV order
+    # FIX: Removed filter for != 'Unknown'. Now includes all stages.
     fig_cost_box = px.box(
-        df_filtered[df_filtered['Stage_at_Diagnosis'] != 'Unknown'],
+        df_filtered,
         x='Stage_at_Diagnosis',
         y='Total_Direct_Medical_Cost',
         color='Stage_at_Diagnosis',
         title='Total Direct Medical Cost by Stage (Right-Skewed)',
         labels={'Total_Direct_Medical_Cost': 'Total Cost (USD)'},
-        category_orders={"Stage_at_Diagnosis": ['I', 'II', 'III', 'IV']} # FIX: Enforce clinical order
+        category_orders={"Stage_at_Diagnosis": stage_order}
     )
     fig_cost_box.update_layout(showlegend=False, yaxis_tickformat="$,")
     st.plotly_chart(fig_cost_box, use_container_width=True)
@@ -292,7 +296,7 @@ st.subheader("📥 Download V3.0 Tokenized Dataset")
 
 csv = df_filtered.to_csv(index=False).encode('utf-8')
 st.download_button(
-    label="📥 Download Filtered V3.0 Dataset (CSV)",
+    label=" Download Filtered V3.0 Dataset (CSV)",
     data=csv,
     file_name='Dataura_V3_Filtered_Evidence_Calibrated.csv',
     mime='text/csv',
