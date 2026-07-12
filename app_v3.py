@@ -164,7 +164,7 @@ with col_disp2:
 # ==========================================
 # Module 2: Survival Outcomes (Zhu et al.) - 5-YEAR VIEW
 # ==========================================
-st.subheader("⏳ 2. Survival Outcomes: The SES Gap (5-Year View)")
+st.subheader(" 2. Survival Outcomes: The SES Gap (5-Year View)")
 st.caption("Benchmark: Zhu et al. Cox Regression shows High SES has significantly better Overall Survival (HR 0.877).")
 
 # Draw a robust Kaplan-Meier step chart capped at 60 months
@@ -172,16 +172,19 @@ fig_surv = go.Figure()
 colors_map = {'Low ($0-54k)': '#EF553B', 'Medium ($55k-74k)': '#636EFA', 'High ($75k+)': '#00CC96'}
 
 for ses in ses_order:
-    original_df = df_filtered[df_filtered['SES_MHI_Category'] == ses]['Survival_Months'].dropna()
-    if len(original_df) == 0: continue
+    sub_df = df_filtered[df_filtered['SES_MHI_Category'] == ses]['Survival_Months'].dropna()
+    if len(sub_df) == 0: continue
     
     # Cap survival times at 60 months (5 years) to focus on meaningful early differences
-    sub_df = original_df.clip(upper=60)
+    sub_df = sub_df.clip(upper=60)
     
     n = len(sub_df)
     unique_times = np.unique(sub_df)
     # Calculate survival probability at each time point
     survival_probs = [(n - np.sum(sub_df <= t)) / n for t in unique_times]
+    
+    # FIX: Use string concatenation instead of f-string to avoid NameError
+    hover_text = ses + '<br>Time: %{x:.0f} months<br>Survival: %{y:.1%}<extra></extra>'
     
     fig_surv.add_trace(go.Scatter(
         x=unique_times,
@@ -189,7 +192,7 @@ for ses in ses_order:
         mode='lines',
         name=ses,
         line=dict(shape='hv', color=colors_map.get(ses, 'gray'), width=2),
-        hovertemplate=f'{ses}<br>Time: %{x:.0f} months<br>Survival: %{y:.1%}<extra></extra>'
+        hovertemplate=hover_text
     ))
 
 fig_surv.update_layout(
@@ -204,6 +207,7 @@ fig_surv.update_layout(
 )
 st.plotly_chart(fig_surv, use_container_width=True)
 st.caption("*Note: Curves are capped at 60 months (5 years) to highlight early survival disparities. Step curves represent the empirical survival function.*")
+
 
 # ==========================================
 # Module 3: Guideline Impact on Treatment (Bekaii-Saab)
