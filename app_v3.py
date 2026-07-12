@@ -1,8 +1,3 @@
-Let me rewrite the Streamlit app code.
-The user is asking me to rewrite the app.
-Let's rewrite the app.
-
-```python
 import streamlit as st
 import pandas as pd
 import numpy as np
